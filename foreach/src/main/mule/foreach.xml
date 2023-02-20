@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="5b33eae0-93a9-424e-b9c8-52192a7ba343" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="18b2d76a-f7c1-4275-8847-d17afca4507d" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Aug15@2014" database="rv" />
+	</db:config>
+	<flow name="foreachFlow" doc:id="09a0070d-b500-419a-90f3-3d56b81fbe5d" initialState="started">
+		<http:listener doc:name="Listener" doc:id="3d493dee-c77a-463a-87f3-9ed42e13fc98" config-ref="HTTP_Listener_config" path="/foreach"/>
+		<ee:transform doc:name="Transform Message" doc:id="046bc5a9-a643-4c3f-9c06-be5837329639">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+ 1 to 100 map 
+ {
+	
+	 id: if($$ == 	3) 'mulesoft' else  200 + $$,
+	 name: "siva",
+	 number: 234556678,
+	 college: "csr"
+ 
+  }]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<batch:job jobName="foreachBatch_Job" doc:id="ea1e9752-53e1-4078-9dfb-b8411b4f6fca" >
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="95d42552-01ae-4902-8206-eaf84846a50f" >
+					<batch:aggregator doc:name="Batch Aggregator" doc:id="f82c3b60-c4c2-4c56-a609-a069c596a367" size="20">
+						<logger level="INFO" doc:name="Logger" doc:id="bd167cc8-ff1f-4337-8ac0-3e46b6abfcfc" message="#[payload]" />
+						<db:bulk-insert doc:name="Bulk insert" doc:id="a04c131d-6ea6-4594-9895-3c1006b8de9f" config-ref="Database_Config">
+							<db:sql ><![CDATA[INSERT INTO rv.student (id, name, number, college)
+VALUES (:id, :name, :number, :college);]]></db:sql>
+						</db:bulk-insert>
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<ee:transform doc:name="Transform Message" doc:id="3bf42218-c215-4377-a674-30e27de7471d">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="ee3e7a94-73e0-4819-a18c-ade1f01ff6b2" message="#[payload]"/>
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+	<flow name="foreachFlow1" doc:id="ccfae73b-05d7-49c7-9f37-a41600fc41a2" initialState="stopped">
+		<http:listener doc:name="Listener" doc:id="5c28dc02-120c-4a62-8547-eb359fbb817e" config-ref="HTTP_Listener_config" path="/retrive"/>
+		<db:select doc:name="Select" doc:id="acb75902-641b-4337-b35f-9ff92a5b6df2" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from student;]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="6c28c860-6d86-4d95-9b76-7c0c3660f229" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ((item,index) -> { "outputid": payload[index].id,
+	"name": payload[index].name,
+	"number": payload[index].number,
+	"college": payload[index].college
+	
+})
+ ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="e6adbccc-ae35-4551-8df7-0a6ce234faf2" message="#[payload]" />
+	</flow>
+</mule>
