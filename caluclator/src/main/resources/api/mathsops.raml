@@ -1,0 +1,40 @@
+#%RAML 1.0
+title: mathsops
+version: v1
+mediaType:
+  - application/json
+traits:
+  errorcode: !include traits/trait-errorresponses.raml
+
+/add:
+  get:
+    is:
+      - errorcode
+    responses:
+      200:
+       body:
+          example: !include /examples/add-response.json
+
+
+/multiply:
+   post:
+    is:
+       - errorcode
+
+    responses:
+     200:
+      body:
+        example: !include examples/multiply-response.json 
+  
+
+/div:
+  put:
+    is:
+      - errorcode
+    responses:
+      200:
+       body:
+         example:  !include examples/div-response.json 
+           
+          
+ 
